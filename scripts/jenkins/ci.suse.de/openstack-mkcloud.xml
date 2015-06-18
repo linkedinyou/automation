@@ -210,6 +210,7 @@ fi
 
 
 if ! [ -e ${automationrepo}/scripts/jenkins/update_automation ] ; then
+  mkdir -p ${automationrepo}/scripts/jenkins
   curl -o ${automationrepo}/scripts/jenkins/update_automation https://raw.githubusercontent.com/SUSE-Cloud/automation/master/scripts/jenkins/update_automation
   chmod a+x ${automationrepo}/scripts/jenkins/update_automation
 fi
@@ -269,7 +270,7 @@ fi
 # report self-gating status
 if [[ $automation_pr ]] ; then
   $ghs -a set-status -s "success" -t $BUILD_URL -c $pr_sha
-  trap "-"
+  trap "-" ERR
 fi
 
 [[ $TESTHEAD ]] || exit 0

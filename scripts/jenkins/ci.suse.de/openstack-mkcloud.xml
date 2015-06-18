@@ -217,8 +217,14 @@ fi
 ${automationrepo}/scripts/jenkins/update_automation #NO PARAMETERS HERE ANY MORE!!!
 
 
+function selfgating_trap()
+{
+  $ghs -a set-status -s "failure" -t $BUILD_URL -c $pr_sha
+}
+
 ## mkcloud self-gating
 if [[ $automation_pr ]] ; then
+  trap "selfgating_trap" ERR
   automationrepo_orig=$automationrepo
   pr_dir=`mktemp -d $WORKSPACE/SUSE-Cloud.automation.XXXXXX`
   automationrepo=$pr_dir/automation
@@ -258,6 +264,12 @@ ret=${PIPESTATUS[0]}
 if [[ $ret != 0 ]] ; then
     echo "mkcloud ret=$ret"
     exit $ret # check return code before tee
+fi
+
+# report self-gating status
+if [[ $automation_pr ]] ; then
+  $ghs -a set-status -s "success" -t $BUILD_URL -c $pr_sha
+  trap "-"
 fi
 
 [[ $TESTHEAD ]] || exit 0

@@ -214,7 +214,7 @@ if ! [ -e ${automationrepo}/scripts/jenkins/update_automation ] ; then
   chmod a+x ${automationrepo}/scripts/jenkins/update_automation
 fi
 # fetch the latest automation updates
-update_automation #NO PARAMETERS HERE ANY MORE!!!
+${automationrepo}/scripts/jenkins/update_automation #NO PARAMETERS HERE ANY MORE!!!
 
 
 ## mkcloud self-gating
@@ -232,6 +232,9 @@ if [[ $automation_pr ]] ; then
   git fetch $ghremote
   git checkout -t $ghremote/pr/$automation_pr
   popd
+  ghs=${automationrepo}/scripts/github-status/github-status.rb
+  pr_sha=`$ghs -a get-latest-sha -p $automation_pr`
+  $ghs -a set-status -s "pending" -t $BUILD_URL -c $pr_sha
 fi
 
 

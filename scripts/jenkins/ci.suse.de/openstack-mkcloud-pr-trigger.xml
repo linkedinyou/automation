@@ -1,15 +1,80 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project>
+  <actions/>
+  <description/>
   <keepDependencies>false</keepDependencies>
-  <properties/>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>mode</name>
+          <description>normal: trigger unseen PRs
+rebuild: trigger unseend and pending PRs
+forcerebuild: trigger unseen, pending and failed PRs</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>normal</string>
+              <string>rebuild</string>
+              <string>forcerebuild</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+    <com.sonyericsson.rebuild.RebuildSettings plugin="rebuild@1.24">
+      <autoRebuild>false</autoRebuild>
+    </com.sonyericsson.rebuild.RebuildSettings>
+  </properties>
   <scm class="hudson.scm.NullSCM"/>
-  <canRoam>true</canRoam>
+  <assignedNode>cloud-mkcloud-mkcloud</assignedNode>
+  <canRoam>false</canRoam>
   <disabled>false</disabled>
   <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
   <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
-  <triggers/>
+  <triggers>
+    <hudson.triggers.TimerTrigger>
+      <spec>H/5 * * * *</spec>
+    </hudson.triggers.TimerTrigger>
+  </triggers>
   <concurrentBuild>false</concurrentBuild>
-  <builders/>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>set -x
+
+export automationrepo=~/github.com/SUSE-Cloud/automation
+
+if ! [ -e ${automationrepo}/scripts/jenkins/update_automation ] ; then
+  mkdir -p ${automationrepo}/scripts/jenkins
+  curl -o ${automationrepo}/scripts/jenkins/update_automation https://raw.githubusercontent.com/SUSE-Cloud/automation/master/scripts/jenkins/update_automation
+  chmod a+x ${automationrepo}/scripts/jenkins/update_automation
+fi
+# fetch the latest automation updates
+${automationrepo}/scripts/jenkins/update_automation
+
+
+action=list-unseen-prs
+case $mode in
+  rebuild) action=list-rebuild-prs
+  ;;
+  forcerebuild) action=list-forcerebuild-prs
+  ;;
+esac
+
+extra="mkcloudtarget=instonly"
+cloudsource=develcloud5
+nodenumber=3
+networkingplugin=openvswitch
+
+## mkcloud self-gating
+ghs=${automationrepo}/scripts/github-status/github-status.rb
+
+for line in `$ghs -a ${action}` ; do
+  automation_pr=${line%%:*}
+  ${automationrepo}/scripts/jenkins/jenkins-job-trigger openstack-mkcloud -p mode=standard automation_pr=${automation_pr} cloudsource="${cloudsource}" nodenumber=${nodenumber} networkingplugin=${networkingplugin} $extra
+done
+</command>
+    </hudson.tasks.Shell>
+  </builders>
   <publishers/>
   <buildWrappers/>
 </project>

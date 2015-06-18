@@ -225,6 +225,7 @@ function selfgating_trap()
 
 ## mkcloud self-gating
 if [[ $automation_pr ]] ; then
+  ghs=${automationrepo}/scripts/github-status/github-status.rb
   trap "selfgating_trap" ERR
   automationrepo_orig=$automationrepo
   pr_dir=`mktemp -d $WORKSPACE/SUSE-Cloud.automation.XXXXXX`
@@ -238,8 +239,11 @@ if [[ $automation_pr ]] ; then
     git config --add remote.${ghremote}.fetch "+refs/pull/*/head:refs/remotes/${ghremote}/pr/*"
   git fetch $ghremote
   git checkout -t $ghremote/pr/$automation_pr
+  #temporary workaround for unrebased PRs:
+  if [ ! -e $ghs ] ; then
+    git merge master
+  fi
   popd
-  ghs=${automationrepo}/scripts/github-status/github-status.rb
   pr_sha=`$ghs -a get-latest-sha -p $automation_pr`
   $ghs -a set-status -s "pending" -t $BUILD_URL -c $pr_sha
 fi
